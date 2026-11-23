@@ -123,8 +123,20 @@ export default function Home() {
         "/circuits/AgeVerify_js/AgeVerify.wasm",
         "/circuits/AgeVerify_0001.zkey"
       );
+      if (
+        typeof result.proof !== "object" ||
+        result.proof === null ||
+        !Array.isArray(result.publicSignals) ||
+        !result.publicSignals.every(
+          (signal) => typeof signal === "string" || typeof signal === "number"
+        )
+      ) {
+        throw new Error("Invalid proof result");
+      }
       setProof(result.proof);
-      setPublicSignals(result.publicSignals as string[]);
+      setPublicSignals(
+        result.publicSignals.map((signal) => String(signal))
+      );
       setIsSimulated(false);
     } catch (error) {
       const detail = String(error);
