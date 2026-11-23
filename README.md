@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ZKP Age Verification Portal
 
-## Getting Started
+A zero-knowledge age verification demo that proves a birth year meets a minimum age requirement without sending the birth year to the server.
 
-First, run the development server:
+- **GitHub repository:** https://github.com/Talha-3921/zkp-age-verify
+- **Live demo:** see Vercel deployment link
+
+## How to Run Locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Circuit Compilation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The Circom source is in `circom/AgeVerify.circom`. After Circom and SnarkJS are installed, compile the circuit and run the trusted setup:
 
-## Learn More
+```bash
+circom circom/AgeVerify.circom --r1cs --wasm --sym -o circuits
 
-To learn more about Next.js, take a look at the following resources:
+snarkjs powersoftau new bn128 14 circuits/pot14_0000.ptau -v
+snarkjs powersoftau contribute circuits/pot14_0000.ptau circuits/pot14_0001.ptau --name="Trusted setup contribution" -v
+snarkjs powersoftau prepare phase2 circuits/pot14_0001.ptau circuits/pot14_final.ptau -v
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+snarkjs groth16 setup circuits/AgeVerify.r1cs circuits/pot14_final.ptau circuits/AgeVerify.zkey
+snarkjs zkey export verificationkey circuits/AgeVerify.zkey keys/verification_key.json
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Place browser-facing witness files and the proving key where the frontend can load them. In demo mode, the application continues without compiled circuit artifacts.
 
-## Deploy on Vercel
+## Team
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Member | Role | Contribution |
+| --- | --- | --- |
+| Wajid | Circuit engineer | Circom circuit design, range constraints, and LessThan age comparison |
+| Saad | Backend engineer | Next.js API route, Groth16 verification, and threat model |
+| Talha | Frontend engineer | Next.js UI, proof workflow, and verification presentation |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Tech Stack
+
+| Area | Technology |
+| --- | --- |
+| Framework | Next.js App Router |
+| Language | TypeScript |
+| Styling | Tailwind CSS |
+| Circuit language | Circom 2.0 |
+| Circuit library | circomlib |
+| Proof system | Groth16 |
+| Proof tooling | SnarkJS |
+| Deployment | Vercel |
+
+## Project Structure
+
+- `circom/AgeVerify.circom` - private-age Circom circuit
+- `circuits/` - compiled R1CS, WASM, zkey, and setup artifacts
+- `keys/verification_key.json` - public Groth16 verification key
+- `app/api/verify/route.ts` - server-side proof verification route
+- `app/page.tsx` - interactive frontend
+- `REPORT.md` - technical and security report
