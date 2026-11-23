@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Circom setup artifacts
+circuits/*.ptau
+circuits/witness.wtns
+circuits/proof.json
+circuits/public.json
+circuits/test_input.json

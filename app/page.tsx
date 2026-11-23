@@ -55,7 +55,11 @@ export default function Home() {
         });
         const data = (await response.json()) as {
           verified?: boolean;
+          simulated?: boolean;
         };
+        if (data.simulated) {
+          setIsSimulated(true);
+        }
         setVerificationResult(data.verified === true);
         setErrorMessage(
           data.verified === true ? null : "Proof verification failed"
@@ -87,6 +91,26 @@ export default function Home() {
       return;
     }
 
+    const age = 2026 - birthYear;
+    if (
+      birthYear < 1900 ||
+      birthYear > 2026 ||
+      !Number.isInteger(birthYear) ||
+      !Number.isInteger(minAge) ||
+      minAge < 0 ||
+      age < minAge
+    ) {
+      setProof(null);
+      setPublicSignals(null);
+      setIsSimulated(false);
+      setVerificationResult(false);
+      setErrorMessage(null);
+      setIsLoading(false);
+      verificationStarted.current = true;
+      setCurrentStep(3);
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage(null);
     setVerificationResult(null);
@@ -102,19 +126,35 @@ export default function Home() {
       setProof(result.proof);
       setPublicSignals(result.publicSignals as string[]);
       setIsSimulated(false);
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      setProof({
-        simulated: true,
-        pi_a: ["0", "0"],
-        pi_b: [
-          ["0", "0"],
-          ["0", "0"],
-        ],
-        pi_c: ["0", "0"],
-      });
-      setPublicSignals(["2026", String(minAge)]);
-      setIsSimulated(true);
+    } catch (error) {
+      const detail = String(error);
+      const missingCircuitArtifact =
+        /404|not found|failed to fetch|networkerror|wasm|zkey/i.test(detail);
+
+      if (missingCircuitArtifact) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        setProof({
+          simulated: true,
+          pi_a: ["0", "0"],
+          pi_b: [
+            ["0", "0"],
+            ["0", "0"],
+          ],
+          pi_c: ["0", "0"],
+        });
+        setPublicSignals(["2026", String(minAge)]);
+        setIsSimulated(true);
+      } else {
+        setProof(null);
+        setPublicSignals(null);
+        setIsSimulated(false);
+        setVerificationResult(false);
+        setErrorMessage(null);
+        setIsLoading(false);
+        verificationStarted.current = true;
+        setCurrentStep(3);
+        return;
+      }
     } finally {
       setIsLoading(false);
       setCurrentStep(3);
@@ -700,11 +740,18 @@ export default function Home() {
               }}
             >
               <div>
-                Server confirmed age ≥ {minAge} without learning the birth year
+                {isSimulated
+                  ? `Demo result: age ≥ ${minAge} without a real proof`
+                  : verificationResult === true
+                    ? `Server confirmed age ≥ ${minAge} without learning the birth year`
+                    : verificationResult === false
+                      ? `The circuit result did not satisfy age ≥ ${minAge}`
+                      : "Waiting for proof verification"}
               </div>
-              <div style={{ color: "#ee8916" }}>
-                Only the proof was sent. The birth year remained private in the
-                browser.
+              <div style={{ color: isSimulated ? "#999999" : "#ee8916" }}>
+                {isSimulated
+                  ? "No proof was sent to the verification server."
+                  : "Only the proof was sent. The birth year remained private in the browser."}
               </div>
               {isSimulated && (
                 <div style={{ color: "#999999" }}>
